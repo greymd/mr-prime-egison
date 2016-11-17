@@ -1,24 +1,46 @@
 #!/usr/bin/env egison
 
+
+;$ echo 'print pow(3, 21)' | python
+;10460353203
+
 ;$ echo 'print pow(3, 21, 321)' | python
 ;33
 
 ;$ echo 'print pow(63437, 3935969939, 20628)' | python
 ;18461
 
+; (define $main
+;   (lambda [$args] (display (power-modulo 3 21 2))))
+
 (define $main
-  (lambda [$args] (display (power-mod 3 21))))
+  (lambda [$args] (do {
+                       (display (power-modulo 3 21 321))
+                       (display (power-modulo 63437 3935969939 20628))
+                       (display (power2 3 21))
+                       (display (power a 5))
+                       (display (power2 a 5))
+                       }
+                    )))
 
-(define $power-mod
-  (lambda [$m $n]
-    (repeated-squaring * m n)))
+(define $power-modulo
+  (lambda [$m $n $z]
+    (repeated-squaring-modulo * m n z)))
 
-(define $repeated-squaring
-  (lambda [$fn $x $n]
+(define $repeated-squaring-modulo
+  (lambda [$fn $x $n $z]
     (match n integer
       {[,1 x]
-       [?even? (let {[$y (repeated-squaring fn x (quotient n 2))]}
-                 (fn y y))]
-       [?odd? (let {[$y (repeated-squaring fn x (quotient n 2))]}
-                (fn (fn y y) x))]})))
+       [?even? (let {[$y (repeated-squaring-modulo fn x (quotient n 2) z)]}
+                 (modulo (fn y y) z))]
+       [?odd? (let {[$y (repeated-squaring-modulo fn x (quotient n 2) z)]}
+                (modulo (fn (fn y y) x) z))]})))
 
+(define $power2
+  (lambda [$x $n]
+    (match n integer
+      {[,1 x]
+       [?even? (let {[$y (power2 x (quotient n 2))]}
+                 (* y y))]
+       [?odd? (let {[$y (power2 x (quotient n 2))]}
+                (* (* y y) x))]})))
