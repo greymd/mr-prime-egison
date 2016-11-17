@@ -1,0 +1,24 @@
+#!/usr/bin/env egison
+
+;$ echo 'print pow(3, 21, 321)' | python
+;33
+
+;$ echo 'print pow(63437, 3935969939, 20628)' | python
+;18461
+
+(define $main
+  (lambda [$args] (display (power-mod 3 21))))
+
+(define $power-mod
+  (lambda [$m $n]
+    (repeated-squaring * m n)))
+
+(define $repeated-squaring
+  (lambda [$fn $x $n]
+    (match n integer
+      {[,1 x]
+       [?even? (let {[$y (repeated-squaring fn x (quotient n 2))]}
+                 (fn y y))]
+       [?odd? (let {[$y (repeated-squaring fn x (quotient n 2))]}
+                (fn (fn y y) x))]})))
+
