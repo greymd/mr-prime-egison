@@ -54,18 +54,14 @@
            (if (and (not (eq? y (- n 1))) (even? t))
                #f (prime-search n odd (- count 1))))]})))
 
-; Re-define and
-(define $cand
-  (cambda $args
-           (eq? (unique/m bool args) {#t})))
-
 ; input n t y
 ; return {t y}
 (define $prime-search2
   (lambda [$n $t $y]
-    (if (cand (ne? t (- n 1)) (ne? y 1) (ne? y (- n 1)))
+    (if (or (eq? t (- n 1)) (or (eq? y 1) (eq? y (- n 1))))
+         [t y]
          (prime-search2 n (* t 2) (power-modulo y 2 n))
-         [t y])))
+        )))
 
 (define $odd-factor
   (lambda [$n]
