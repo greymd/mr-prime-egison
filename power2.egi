@@ -47,20 +47,17 @@
   (lambda [$n $odd $count]
     (match count integer
       {[,0 #t]
-      [_ (let* {
-           [$a (pure-rand 1 (- n 2))]
-           [[$t $y] (prime-search2 n odd (power-modulo a odd n))]
-           }
-           (if (and (not (eq? y (- n 1))) (even? t))
+      [_ (let {[$randnum (pure-rand 1 (- n 2))]}
+           (if (witness n odd (power-modulo randnum odd n))
                #f (prime-search n odd (- count 1))))]})))
 
 ; input n t y
 ; return {t y}
-(define $prime-search2
+(define $witness
   (lambda [$n $t $y]
     (if (or (eq? t (- n 1)) (or (eq? y 1) (eq? y (- n 1))))
-         [t y]
-         (prime-search2 n (* t 2) (power-modulo y 2 n))
+         (and (not (eq? y (- n 1))) (even? t))
+         (witness n (* t 2) (power-modulo y 2 n))
         )))
 
 (define $odd-factor
