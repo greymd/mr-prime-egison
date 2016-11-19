@@ -1,0 +1,93 @@
+(define $prime-mr?
+  (lambda [$n]
+    (match (abs n) integer
+      {
+       [,2 #t]
+       [,1 #f]
+       [?even? #f]
+       [_ (prime-checks n (odd-factor (- n 1)) 20)]})))
+
+(define $prime-checks
+  (lambda [$n $odd $count]
+    (match count integer
+      {[,0 #t]
+      [_ (let {[$randnum (pure-rand 1 (- n 2))]}
+           (if (witness n odd (power-modulo randnum odd n))
+               #f (prime-checks n odd (- count 1))))]})))
+
+(define $prime-checks-for-size
+  (lambda [$n]
+    (match (length (dec2bin n)) integer
+      {
+      [?(gt? $ 1300) 2]
+      [?(gt? $ 850)  3]
+      [?(gt? $ 850)  3]
+      [?(gt? $ 650)  4]
+      [?(gt? $ 550)  5]
+      [?(gt? $ 450)  6]
+      [?(gt? $ 400)  7]
+      [?(gt? $ 350)  8]
+      [?(gt? $ 300)  9]
+      [?(gt? $ 250) 12]
+      [?(gt? $ 200) 15]
+      [?(gt? $ 150) 18]
+      [_ 27]
+      })))
+
+
+; 数字を与えたら、それのビット列をコレクションで返す。
+; @input n  -- integer
+; @return bits -- (list integer)
+; @example
+; > (dec2bin 5)
+; {1 0 1}
+(define $dec2bin
+  (lambda [$n]
+    (letrec
+      {[$bitnum (lambda [$n $bits]
+                  (match [n bits] [integer (list integer)]
+                    {[[,0 _] bits]
+                    [_ (bitnum (quotient n 2) (cons (modulo n 2) bits))]}))]}
+      (bitnum n {}))))
+
+; input n t y
+; return #t or #f
+(define $witness
+  (lambda [$n $t $y]
+    (if (or (eq? t (- n 1)) (or (eq? y 1) (eq? y (- n 1))))
+        (and (not (eq? y (- n 1))) (even? t))
+        (witness n (* t 2) (power-modulo y 2 n)))))
+
+; n = d*2^k となるような奇数の因数dを見つける
+; @input n  -- integer
+; @return d -- integer odd number
+; @example
+; > (odd-factor 20)
+; 5
+;; 20 = 5 * 2^4
+(define $odd-factor
+  (lambda [$n]
+    (match n integer
+      {[?odd? n]
+       [_ (odd-factor (quotient n 2))]})))
+
+; 冪乗した余りを求める。
+; input x n z
+; return x^n (mod z) -- integer
+(define $power-modulo
+  (lambda [$x $n $z]
+    (match n integer
+      {[,1 x]
+       [?even? (let {[$y (power-modulo x (quotient n 2) z)]}
+                 (modulo (* y y) z))]
+       [?odd? (let {[$y (power-modulo x (quotient n 2) z)]}
+                (modulo (* (* y y) x) z))]})))
+
+; (define $power
+;   (lambda [$x $n]
+;     (match n integer
+;       {[,1 x]
+;        [?even? (let {[$y (power2 x (quotient n 2))]}
+;                  (* y y))]
+;        [?odd? (let {[$y (power2 x (quotient n 2))]}
+;                 (* (* y y) x))]})))
