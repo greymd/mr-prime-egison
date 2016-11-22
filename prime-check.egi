@@ -1,6 +1,6 @@
 #!/usr/bin/env egison
 
-(load-file "./prime-mr.egi")
+(load-file "./mr-prime.egi")
 (define $main
   (lambda [$args] (let {[$number (read (nth 1 args))]}
                     (if (prime-mr? number)

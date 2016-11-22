@@ -1,5 +1,5 @@
 #!/usr/bin/env egison
-(load-file "./prime-mr.egi")
+(load-file "./mr-prime.egi")
 (define $main
   (lambda [$args] (each display (take 1 (filter prime-mr? (filter odd? rand-nats-1024bits))))))
 
