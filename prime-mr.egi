@@ -1,3 +1,6 @@
+; 与えられた数が素数かどうか判定
+; @input n   -- integer
+; @return #t or #f
 (define $prime-mr?
   (lambda [$n]
     (match (abs n) integer
@@ -5,22 +8,32 @@
        [,2 #t]
        [,1 #f]
        [?even? #f]
-       [_ (prime-checks n (odd-factor (- n 1)) 20)]})))
+       [_ (prime-checks n (odd-factor (- n 1)) (prime-checks-for-size n))]})))
 
+; Miller–Rabin素数判定アルゴリズムで
+; 与えられた数が素数かどうか判定
+; @input n     | integer | 判定したい数字
+; @input odd   | integer | n-1 = odd*2^kとなるような奇数の因数。
+; @input count | integer | Miller–Rabin素数判定アルゴリズムのイテレーション回数
+; @return      | bool    | #t or #f
 (define $prime-checks
   (lambda [$n $odd $count]
     (match count integer
       {[,0 #t]
       [_ (let {[$randnum (pure-rand 1 (- n 2))]}
-           (if (witness n odd (power-modulo randnum odd n))
-               #f (prime-checks n odd (- count 1))))]})))
+           (match (witness n odd (power-modulo randnum odd n)) integer
+             {[,#t #f]
+             [_ (prime-checks n odd (- count 1))]}))]})))
 
+; Miller–Rabin素数判定アルゴリズムの
+; イテレーションの回数。偽陽性が2^-80になるような確率。
+; @input n -- ビット数
+; @return integer -- イテレーションの回数
 (define $prime-checks-for-size
   (lambda [$n]
-    (match (length (dec2bin n)) integer
+    (match (length (int2bits n)) integer
       {
       [?(gt? $ 1300) 2]
-      [?(gt? $ 850)  3]
       [?(gt? $ 850)  3]
       [?(gt? $ 650)  4]
       [?(gt? $ 550)  5]
@@ -31,34 +44,68 @@
       [?(gt? $ 250) 12]
       [?(gt? $ 200) 15]
       [?(gt? $ 150) 18]
-      [_ 27]
-      })))
+      [_ 27]})))
 
+; イテレーション1回分の素数(合成数)判定
+; n-1 = odd*2^k とすると、k回実施される。
+; @input n | integer | 判定したい整数
+; @input t | integer | n-1 = odd*2^kとなるような奇数の因数。
+; @input y | integer | 1 から n-2 までの乱数aとすると、y = a^t % n
+; @return  | bool    | 合成数の場合#t, そうでない場合#fを返す。
+(define $witness
+  (lambda [$n $t $y]
+    (let {[$result (and (not (eq? y (- n 1))) (even? t))]}
+      (match [n t y] [integer integer integer]
+        {[[$n ,(- n 1) _] result]
+        [[_ _ ,1] result]
+        [[$n _ ,(- n 1)] result]
+        [_ (witness n (* t 2) (power-modulo y 2 n))]}))))
 
-; $B?t;z$rM?$($?$i!"$=$l$N%S%C%HNs$r%3%l%/%7%g%s$GJV$9!#(B
+; OCTAVEにインスパイアされた無限配列
+; onesは1の、zerosは0の無限コレクション
+(define $ones {1 @(map 1#%1 ones)})
+(define $zeros {0 @(map 1#%1 zeros)})
+
+; 1 1 1 1 1 1 ...
+(define $mersenne-bits ones)
+
+; 1 0 0 0 0 0 ...
+(define $powerof2-bits {1 @zeros})
+
+; 数字を与えたら、それのビット列をコレクションで返す。
+; 10進数->2進数の変換
 ; @input n  -- integer
 ; @return bits -- (list integer)
 ; @example
 ; > (dec2bin 5)
 ; {1 0 1}
-(define $dec2bin
+(define $int2bits
   (lambda [$n]
     (letrec
-      {[$bitnum (lambda [$n $bits]
-                  (match [n bits] [integer (list integer)]
-                    {[[,0 _] bits]
-                    [_ (bitnum (quotient n 2) (cons (modulo n 2) bits))]}))]}
-      (bitnum n {}))))
+      {[$int2bits-impl (lambda [$n $bits]
+                         (match [n bits] [integer (list integer)]
+                           {[[,0 _] bits]
+                           [_ (int2bits-impl (quotient n 2) (cons (modulo n 2) bits))]}))]}
+      (int2bits-impl n {}))))
 
-; input n t y
-; return #t or #f
-(define $witness
-  (lambda [$n $t $y]
-    (if (or (eq? t (- n 1)) (or (eq? y 1) (eq? y (- n 1))))
-        (and (not (eq? y (- n 1))) (even? t))
-        (witness n (* t 2) (power-modulo y 2 n)))))
+; ビット列を与えたら、それを整数で返す。
+; 2進数->10進数の変換
+; @input bits -- (list integer)
+; @return integer
+; > (bin2dec {1 0 1})
+; 5
+(define $bits2int
+  (lambda [$bits]
+    (letrec
+      {[$bin2int-impl
+        (lambda [$sum $offset $bitarr]
+          (match bitarr (list integer)
+            {[,{} sum]
+             [<snoc $x $xs> (bin2int-impl (+ sum (* x (power2 2 offset))) (+ offset 1) xs)]}))]}
+      (bin2int-impl 0 0 bits))))
 
-; n = d*2^k $B$H$J$k$h$&$J4q?t$N0x?t(Bd$B$r8+$D$1$k(B
+
+; n = d*2^k となるような奇数の因数dを見つける
 ; @input n  -- integer
 ; @return d -- integer odd number
 ; @example
@@ -71,7 +118,7 @@
       {[?odd? n]
        [_ (odd-factor (quotient n 2))]})))
 
-; $BQQ>h$7$?M>$j$r5a$a$k!#(B
+; 冪乗した余りを求める。
 ; input x n z
 ; return x^n (mod z) -- integer
 (define $power-modulo
@@ -80,14 +127,18 @@
       {[,1 x]
        [?even? (let {[$y (power-modulo x (quotient n 2) z)]}
                  (modulo (* y y) z))]
-       [?odd? (let {[$y (power-modulo x (quotient n 2) z)]}
-                (modulo (* (* y y) x) z))]})))
+       [?odd?  (let {[$y (power-modulo x (quotient n 2) z)]}
+                 (modulo (* (* y y) x) z))]})))
 
-; (define $power
-;   (lambda [$x $n]
-;     (match n integer
-;       {[,1 x]
-;        [?even? (let {[$y (power2 x (quotient n 2))]}
-;                  (* y y))]
-;        [?odd? (let {[$y (power2 x (quotient n 2))]}
-;                 (* (* y y) x))]})))
+; 繰り返し二乗法で効率的に冪乗計算をする
+; @input x n
+; @return x^n
+(define $power2
+  (lambda [$x $n]
+    (match n integer
+      {[,0 1]
+       [,1 x]
+       [?even? (let {[$y (power2 x (quotient n 2))]}
+                 (* y y))]
+       [?odd? (let {[$y (power2 x (quotient n 2))]}
+                (* (* y y) x))]})))
